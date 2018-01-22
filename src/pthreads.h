@@ -123,6 +123,7 @@ ZEND_BEGIN_MODULE_GLOBALS(pthreads)
 	HashTable resolve;
 	HashTable filenames;
 	HashTable *resources;
+	int hard_copy_interned_strings;
 ZEND_END_MODULE_GLOBALS(pthreads)
 #	define PTHREADS_ZG(v) TSRMG(pthreads_globals_id, zend_pthreads_globals *, v)
 #   define PTHREADS_PID() PTHREADS_ZG(pid) ? PTHREADS_ZG(pid) : (PTHREADS_ZG(pid)=getpid())
@@ -137,7 +138,10 @@ ZEND_END_MODULE_GLOBALS(pthreads)
 #define PTHREADS_PG(ls, v) PTHREADS_FETCH_CTX(ls, core_globals_id, php_core_globals*, v)
 #define PTHREADS_EG_ALL(ls) PTHREADS_FETCH_ALL(ls, executor_globals_id, zend_executor_globals*)
 
-#define zend_string_new(s) zend_string_dup((s), GC_FLAGS((s)) & IS_STR_PERSISTENT)
+#define zend_string_new(s) \
+	PTHREADS_ZG(hard_copy_interned_strings) \
+		? zend_new_interned_string(zend_string_init(ZSTR_VAL((s)), ZSTR_LEN((s)), GC_FLAGS((s)) & IS_STR_PERSISTENT)) \
+		: zend_string_dup((s), GC_FLAGS((s)) & IS_STR_PERSISTENT)
 
 /* {{{ */
 static inline const zend_op* pthreads_check_opline(zend_execute_data *ex, zend_long offset, zend_uchar opcode) {
